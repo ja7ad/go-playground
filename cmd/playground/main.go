@@ -125,7 +125,7 @@ func start(logger *zap.Logger, cfg *config.Config) error {
 
 	srv := &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      r,
+		Handler:      withCORS(r),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,
@@ -137,6 +137,19 @@ func start(logger *zap.Logger, cfg *config.Config) error {
 
 	wg.Wait()
 	return nil
+}
+
+func withCORS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func startHttpServer(ctx context.Context, wg *sync.WaitGroup, server *http.Server) error {
